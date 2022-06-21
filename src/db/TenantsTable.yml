@@ -1,0 +1,30 @@
+TenantsTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: ${env:TENANTS_TABLE_NAME}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: clientId
+        AttributeType: S
+      - AttributeName: clientReference
+        AttributeType: S
+      - AttributeName: tenantName
+        AttributeType: S
+      # - AttributeName: configuration
+      #   AttributeType: L
+    KeySchema:
+      - AttributeName: clientId
+        KeyType: HASH
+    GlobalSecondaryIndexes:
+      - IndexName: tenantNameIndex
+        KeySchema:
+          - AttributeName: tenantName
+            KeyType: HASH
+        Projection:
+          ProjectionType: 'ALL'
+      - IndexName: clientReferenceIndex
+        KeySchema:
+          - AttributeName: clientReference
+            KeyType: HASH
+        Projection:
+          ProjectionType: 'ALL'

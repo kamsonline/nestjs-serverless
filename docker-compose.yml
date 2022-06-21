@@ -1,0 +1,37 @@
+version: '3.9'
+
+volumes:
+  dynamodata: {}
+
+services:
+  # runs dynamodb-local
+  db:
+    container_name: dynamodb
+    image: amazon/dynamodb-local
+    ports:
+      - '8000:8000'
+    volumes:
+      - dynamodata:/home/dynamodblocal
+    command: '-jar DynamoDBLocal.jar -sharedDb -dbPath .'
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 3000:3000
+      - 9229:9229
+    volumes:
+      - .:/app
+
+  # runs 'sls offline' in Docker
+  slsoffline:
+    build:
+      context: .
+      dockerfile: Dockerfile.slsoffline
+    ports:
+      - 3000:3000
+      - 3001:3001
+    volumes:
+      - .:/app

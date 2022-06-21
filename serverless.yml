@@ -1,0 +1,73 @@
+service: nest-serverless
+frameworkVersion: '>=3'
+useDotenv: true
+
+plugins:
+  - serverless-plugin-warmup-ts-bridge-v2 # this needs to go before the warmup plugin
+  - serverless-plugin-warmup # this needs to go before the typescript plugin
+  - serverless-dotenv-plugin
+  - serverless-plugin-typescript
+  - serverless-offline
+  - serverless-dynamodb-local
+
+package:
+  patterns:
+    - '!dist/**'
+  exclude:
+    - node_modules/typescript/**
+    - node_modules/@types/**
+
+custom:
+  warmup:
+    default:
+      enabled: true
+      prewarm: true # Run WarmUp immediately after a deployment
+      timeout: 16 # One second longer than main lambda timeout
+      vpc: false # ensure WarmUp lambda isn't launched in a VPC
+  serverless-offline:
+    httpPort: ${env:HTTP_PORT}
+  dotenv:
+    # https://github.com/neverendingqs/serverless-dotenv-plugin
+    # default: project root
+    #path: path/to/my/dotenvfiles
+    logging: true
+    include:
+      - HTTP_PORT
+      - REGION
+      - TENANTS_TABLE_NAME
+  TenantsTable:
+    name: !Ref TenantsTable
+    arn: !GetAtt TenantsTable.Arn
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  memorySize: 1024
+  timeout: 15 # When this is updated, update the warmup timeout as well
+  region: ${env:REGION} # ap-southeast-2 # Update to this remove the hardcoding
+  logRetentionInDays: 14 # Update this to get from global config
+  stage: ${opt:stage, 'dev'}
+  environment:
+    HTTP_PORT: ${env:HTTP_PORT}
+  iamRoleStatements:
+    - ${file(src/db/TenantsTableIAM.yml):TenantsTableIAM}
+    - ${file(src/db/TenantsTableIndexIAM.yml):TenantsTableIndexIAM}
+
+resources:
+  Resources:
+    TenantsTable: ${file(src/db/TenantsTable.yml):TenantsTable}
+
+functions:
+  main:
+    handler: src/lambda.handler
+    environment:
+      NODE_ENV: production
+      REGION: ap-southeast-2
+      TENANTS_TABLE_NAME: ${env:TENANTS_TABLE_NAME}
+    events:
+      - http:
+          method: ANY
+          path: /
+      - http:
+          method: ANY
+          path: '{proxy+}'

@@ -1,0 +1,9 @@
+TenantsTableIndexIAM:
+  Effect: Allow
+  Action:
+    - dynamodb:Query
+  Resource:
+    - !Join
+      - ''
+      - - !GetAtt TenantsTable.Arn
+        - '/index/*'
